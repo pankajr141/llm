@@ -64,7 +64,7 @@ def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=T
 
     return filepaths
 
-def download_sample_text(gutenberg_book_ids=[1342, 84, 1661]):
+def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True):
     """
     Downloads a sample text file and multiple books from Project Gutenberg.
 
@@ -78,7 +78,8 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661]):
         gutenberg_book_ids (list, optional): A list of Project Gutenberg book IDs
             to download. Defaults to [1342, 84, 1661] (Pride and Prejudice,
             Frankenstein, The Adventures of Sherlock Holmes).
-
+        verbose (bool, optional): A flag indicating whether to print download
+            progress. Defaults to True.
     Returns:
         list: A list of filepaths where the downloaded text file and Gutenberg
             books are saved.
@@ -89,7 +90,7 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661]):
     urllib.request.urlretrieve(url, filepath)
 
     # Download multiple books from Project Gutenberg
-    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids)
+    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose)
 
     return [filepath] + gutenberg_filepaths
 
