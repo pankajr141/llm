@@ -90,7 +90,7 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True):
     urllib.request.urlretrieve(url, filepath)
 
     # Download multiple books from Project Gutenberg
-    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose)
+    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose=verbose)
 
     return [filepath] + gutenberg_filepaths
 
@@ -115,7 +115,8 @@ def read_filepaths(filepaths):
     return concatenated_text
 
 if __name__ == "__main__":
-    filepaths = download_sample_text()
-    print(f"filepaths: {filepaths}")
-    text = read_filepaths(filepaths)
-    print(f"text: {text[:100]}")
+
+    gutenberg_book_ids = range(100)
+    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=True)
+    textdata = read_filepaths(filepaths)
+    print(f"text: {textdata[:100]}")
