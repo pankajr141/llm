@@ -18,6 +18,21 @@ config_train = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def calc_loss_batch(input_batch, target_batch, model, device):
+    """
+    Calculates the cross-entropy loss for a single batch.
+
+    This function computes the cross-entropy loss between the model's
+    predictions (logits) and the target values for a given batch of data.
+
+    Args:
+        input_batch (torch.Tensor): Input batch tensor of shape (batch_size, sequence_length).
+        target_batch (torch.Tensor): Target batch tensor of shape (batch_size, sequence_length).
+        model (torch.nn.Module): The language model.
+        device (torch.device): The device (CPU or GPU) to use.
+
+    Returns:
+        torch.Tensor: The calculated cross-entropy loss (a scalar tensor).
+    """
     input_batch = input_batch.to(device)
     target_batch = target_batch.to(device)      
     logits = model(input_batch)
@@ -27,6 +42,22 @@ def calc_loss_batch(input_batch, target_batch, model, device):
     return loss
 
 def calc_loss_loader(data_loader, model, device, num_batches=None):
+    """
+    Calculates the average loss over a data loader.
+
+    This function iterates through a data loader, computes the loss for each
+    batch, and returns the average loss across all processed batches.
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): The data loader.
+        model (torch.nn.Module): The language model.
+        device (torch.device): The device (CPU or GPU) to use.
+        num_batches (int, optional): The number of batches to process. If None,
+            processes all batches. Defaults to None.
+
+    Returns:
+        float: The average loss. Returns NaN if the data loader is empty.
+    """
     total_loss = 0.
     if len(data_loader) == 0:
         return float("nan")
@@ -34,6 +65,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         num_batches = len(data_loader)
     else:
         num_batches = min(num_batches, len(data_loader))
+
     for i, (input_batch, target_batch) in enumerate(data_loader):
         if i < num_batches:
             loss = calc_loss_batch(
@@ -45,6 +77,23 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
     return total_loss / num_batches
 
 def evaluate_model(model, train_loader, val_loader, device, eval_iter):
+    """
+    Evaluates the model on the training and validation sets.
+
+    This function calculates the average loss of the model on both the training
+    and validation data loaders. It sets the model to evaluation mode during
+    the process and then returns it to training mode.
+
+    Args:
+        model (torch.nn.Module): The language model.
+        train_loader (torch.utils.data.DataLoader): The training data loader.
+        val_loader (torch.utils.data.DataLoader): The validation data loader.
+        device (torch.device): The device (CPU or GPU) to use.
+        eval_iter (int): The number of batches to use for evaluation.
+
+    Returns:
+        tuple: A tuple containing the training loss and validation loss.
+    """
     model.eval()
     with torch.no_grad():
         train_loss = calc_loss_loader(
@@ -58,6 +107,29 @@ def evaluate_model(model, train_loader, val_loader, device, eval_iter):
 
 def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
                 eval_freq, eval_iter, start_context, tokenizer):
+    """
+    Trains the language model.
+
+    This function trains the provided language model using the given training
+    data loader and optimizer. It also evaluates the model on the validation
+    data loader at specified intervals.
+
+    Args:
+        model (torch.nn.Module): The language model.
+        train_loader (torch.utils.data.DataLoader): The training data loader.
+        val_loader (torch.utils.data.DataLoader): The validation data loader.
+        optimizer (torch.optim.Optimizer): The optimizer.
+        device (torch.device): The device (CPU or GPU) to use.
+        num_epochs (int): The number of training epochs.
+        eval_freq (int): The frequency of evaluation (in steps).
+        eval_iter (int): The number of batches to use for evaluation.
+        start_context (str): The starting context for text generation.
+        tokenizer (tiktoken.Encoding): The tokenizer.
+
+    Returns:
+        tuple: A tuple containing lists of training losses, validation losses,
+            and the number of tokens seen at each evaluation step.
+    """
     
     train_losses, val_losses, track_tokens_seen = [], [], []
     tokens_seen, global_step = 0, -1
@@ -92,6 +164,19 @@ def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
     return train_losses, val_losses, track_tokens_seen
 
 def generate_and_print_sample(model, device, tokenizer, start_context):
+    """
+    Generates and prints a sample text sequence from the model.
+
+    This function generates a sample text sequence using the provided model,
+    starting from the given context. It then prints the generated text to the
+    console.
+
+    Args:
+        model (torch.nn.Module): The language model.
+        device (torch.device): The device (CPU or GPU) to use.
+        tokenizer (tiktoken.Encoding): The tokenizer.
+        start_context (str): The starting context for text generation.
+    """
     model.eval()
     context_size = model.pos_emb.weight.shape[0] # config_train["context_length"]
     encoded = tokenizer_lib.text_to_token_ids(start_context, tokenizer).to(device)
@@ -105,12 +190,38 @@ def generate_and_print_sample(model, device, tokenizer, start_context):
     model.train()
 
 def split_data(textdata, train_ratio=0.90):
+    """
+    Splits the text data into training and validation sets.
+
+    This function divides the input text data into two parts: a training set
+    and a validation set, based on the specified ratio.
+
+    Args:
+        textdata (str): The text data.
+        train_ratio (float, optional): The ratio of data to use for training.
+            Defaults to 0.90.
+
+    Returns:
+        tuple: A tuple containing the training data and validation data.
+    """
     split_idx = int(train_ratio * len(textdata))
     train_data = textdata[:split_idx]
     val_data = textdata[split_idx:]
     return train_data, val_data
 
 def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
+    """
+    Plots the training and validation losses.
+
+    This function creates a plot showing the training and validation losses
+    over the course of training.
+
+    Args:
+        epochs_seen (torch.Tensor): Tensor of epochs seen.
+        tokens_seen (list): List of tokens seen.
+        train_losses (list): List of training losses.
+        val_losses (list): List of validation losses.
+    """
     fig, ax1 = plt.subplots(figsize=(5, 3))
     ax1.plot(epochs_seen, train_losses, label="Training loss")
     ax1.plot(
@@ -121,11 +232,25 @@ def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
     ax1.legend(loc="upper right")
  
 
-def train(tokenizer):
+def train(tokenizer=tokenizer_lib.get_tokenizer(), num_epochs=10, model_filepath="model_and_optimizer.pth"):
+    """
+    Main training function.
+
+    This function orchestrates the entire training process, including loading
+    the model, preparing the data, training the model, and saving the trained
+    model.
+
+    Args:
+        tokenizer (tiktoken.Encoding, optional): The tokenizer. Defaults to
+            tokenizer_lib.get_tokenizer().
+        num_epochs (int, optional): The number of training epochs. Defaults to 10.
+        model_filepath (str, optional): The file path to load/save the model.
+            Defaults to "model_and_optimizer.pth".
+    """
     torch.manual_seed(123)
     model_llm = model.LLMModel(config_train)
-    model_llm = model.load_model(model_llm)         # Resuming training by loading previously trained model
-    model_llm.to(device)                            # Assigning GPU/CPU to model
+    model_llm = model.load_model(model_llm, model_filepath) # Resuming training by loading previously trained model
+    model_llm.to(device)                                    # Assigning GPU/CPU to model
 
     print(f"Device: {device}")
 
@@ -148,23 +273,11 @@ def train(tokenizer):
     
     val_loader = dataset.create_dataloader(val_data, batch_size=2, max_length=context_len, stride=context_len,
                                             drop_last=False, shuffle=False, num_workers=0)
-    # print("Train loader:")
-    # for x, y in train_loader:
-    #     print(x.shape, y.shape)
 
-    # print("\nValidation loader:")
-    # for x, y in val_loader:
-    #     print(x.shape, y.shape)
-
-    # for input_batch, target_batch in train_loader:
-    #     print(input_batch.shape, target_batch.shape)
-        
-    # return
     # Defining optimizer
     optimizer = torch.optim.AdamW(model_llm.parameters(), lr=0.0004, weight_decay=0.1)
 
     # Training LLM model from scratch
-    num_epochs = 10
     train_losses, val_losses, tokens_seen = train_model(model_llm, train_loader, val_loader, optimizer, device,
                                                         num_epochs=num_epochs, eval_freq=5, eval_iter=5,
                                                         start_context="Every effort moves you", tokenizer=tokenizer)
@@ -172,9 +285,8 @@ def train(tokenizer):
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 
     # Saving the model, so that we can resume training later or use for inference
-    model.save_model(model_llm)
+    model.save_model(model_llm, model_filepath)
 
 if __name__ == "__main__":
     config_train = config.GPT_CONFIG_124M
-    tokenizer = tokenizer_lib.get_tokenizer()
-    train(tokenizer)
+    train()

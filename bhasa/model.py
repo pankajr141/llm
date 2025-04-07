@@ -7,13 +7,13 @@ class GELU(nn.Module):
     """
     Gaussian Error Linear Unit (GELU) activation function.
 
-    This module implements the GELU activation function, which is a smooth,
-    non-monotonic activation function that has been shown to perform well in
-    transformer models.
+    GELU is a smooth, non-monotonic activation function that approximates
+    the expected transformation of a neuron's input by randomly applying
+    either the identity or zero transformation, depending on the input's value.
+    It's known for its strong performance in transformer models.
 
-    GELU approximates the expected transformation of a neuron's input by
-    randomly applying either the identity or zero transformation, depending
-    on the input's value.
+    The GELU activation is defined as:
+    GELU(x) = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
 
     Attributes:
         None
@@ -43,15 +43,16 @@ class LayerNorm(nn.Module):
     """
     Layer Normalization module.
 
-    This module implements layer normalization, which normalizes the activations
-    of a layer across the feature dimension. It helps stabilize and speed up
-    the training of deep neural networks.
+    Layer normalization normalizes the activations of a layer across the
+    feature dimension. It stabilizes and accelerates the training of deep
+    neural networks.
 
     Args:
         emb_dim (int): The embedding dimension (number of features).
 
     Attributes:
-        eps (float): A small constant added to the variance to prevent division by zero.
+        eps (float): A small constant added to the variance to prevent
+            division by zero (default: 1e-5).
         scale (nn.Parameter): A trainable scaling parameter.
         shift (nn.Parameter): A trainable shifting parameter.
     """
@@ -95,16 +96,17 @@ class FeedForward(nn.Module):
     """
     Feed-forward neural network module.
 
-    This module implements a feed-forward neural network with two linear layers
-    and a GELU activation function in between. It is used as part of the
-    transformer block.
+    This module implements a feed-forward neural network with two linear
+    layers and a GELU activation function in between. It's a standard
+    component in transformer blocks.
 
     Args:
         cfg (dict): A dictionary containing configuration parameters, including
             "emb_dim" (embedding dimension).
 
     Attributes:
-        layers (nn.Sequential): A sequential container of the linear layers and GELU activation.
+        layers (nn.Sequential): A sequential container of the linear layers
+            and GELU activation.
     """
     def __init__(self, cfg):
         """
@@ -142,9 +144,10 @@ class TransformerBlock(nn.Module):
 
     Args:
         cfg (dict): A dictionary containing configuration parameters, including
-            "emb_dim" (embedding dimension), "context_length" (maximum sequence length),
-            "n_heads" (number of attention heads), "drop_rate" (dropout rate),
-            and "qkv_bias" (whether to use bias in query, key, value projections).
+            "emb_dim" (embedding dimension), "context_length" (maximum sequence
+            length), "n_heads" (number of attention heads), "drop_rate"
+            (dropout rate), and "qkv_bias" (whether to use bias in query, key,
+            value projections).
 
     Attributes:
         att (MultiHeadAttention): The multi-head attention layer.
@@ -210,8 +213,9 @@ class LLMModel(nn.Module):
     Args:
         cfg (dict): A dictionary containing configuration parameters, including
             "vocab_size" (vocabulary size), "emb_dim" (embedding dimension),
-            "context_length" (maximum sequence length), "n_heads" (number of attention heads),
-            "n_layers" (number of transformer blocks), and "drop_rate" (dropout rate).
+            "context_length" (maximum sequence length), "n_heads" (number of
+            attention heads), "n_layers" (number of transformer blocks), and
+            "drop_rate" (dropout rate).
 
     Attributes:
         tok_emb (nn.Embedding): Token embedding layer.
@@ -265,9 +269,13 @@ def print_model_information(model):
     """
     Prints information about the model.
 
-    This function prints the total number of parameters, the shape of the token
-    embedding layer, the shape of the output layer, the number of trainable
-    parameters considering weight tying, and the total size of the model in MB.
+    This function prints the total number of parameters, the shape of the
+    token embedding layer, the shape of the output layer, the number of
+    trainable parameters considering weight tying, and the total size of the
+    model in MB.
+
+    Weight tying refers to sharing the weights between the token embedding
+    layer and the output layer.
 
     Args:
         model (nn.Module): The model to print information about.
@@ -289,31 +297,35 @@ def print_model_information(model):
     print(f"# Total size of the model: {total_size_mb:.2f} MB")
     print("##======================================================##")
 
-def save_model(model):
+def save_model(model, modelfile="model_and_optimizer.pth"):
     """
     Saves the model and optimizer state to a file.
 
     Args:
         model (nn.Module): The model to save.
+        modelfile (str, optional): The file path to save the model to.
+            Defaults to "model_and_optimizer.pth".
     """
     torch.save({
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                "model_and_optimizer.pth"
+                modelfile
     )
 
-def load_model(model):
+def load_model(model, modelfile="model_and_optimizer.pth"):
     """
     Loads the model and optimizer state from a file.
 
     Args:
         model (nn.Module): The model to load the state into.
+        modelfile (str, optional): The file path to load the model from.
+            Defaults to "model_and_optimizer.pth".
 
     Returns:
-        nn.Module: The model with loaded state, or the original model if the file doesn't exist.
+        nn.Module: The model with loaded state, or the original model if the
+            file doesn't exist.
     """
-    modelfile = "model_and_optimizer.pth"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if not os.path.exists(modelfile):
