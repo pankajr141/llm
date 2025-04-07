@@ -301,7 +301,7 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
 
     # Saving the model, so that we can resume training later or use for inference
-    model.save_model(model_llm, model_filepath)
+    model.save_model(model_llm, optimizer, model_filepath)
 
 if __name__ == "__main__":
     train()

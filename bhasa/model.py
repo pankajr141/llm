@@ -297,12 +297,13 @@ def print_model_information(model):
     print(f"# Total size of the model: {total_size_mb:.2f} MB")
     print("##======================================================##")
 
-def save_model(model, modelfile="model_and_optimizer.pth"):
+def save_model(model, optimizer, modelfile="model_and_optimizer.pth"):
     """
     Saves the model and optimizer state to a file.
 
     Args:
         model (nn.Module): The model to save.
+        optimizer (torch.optim.Optimizer): The optimizer to save.
         modelfile (str, optional): The file path to save the model to.
             Defaults to "model_and_optimizer.pth".
     """
