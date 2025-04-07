@@ -232,7 +232,7 @@ def get_device():
     return device
 
 def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFIG_124M, 
-          num_epochs=10, model_filepath="model_and_optimizer.pth"):
+          num_epochs=10, eval_freq=5, eval_iter=5, model_filepath="model_and_optimizer.pth"):
     """
     Main training function to orchestrate the model training process.
 
@@ -254,6 +254,10 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
         config_train (dict, optional): The configuration dictionary for the model.
             Defaults to config.GPT_CONFIG_124M.
         num_epochs (int, optional): The number of training epochs to run. Defaults to 10.
+        eval_freq (int, optional): The frequency of evaluation (in steps).
+            Defaults to 5.
+        eval_iter (int, optional): The number of batches to use for each
+            evaluation. Defaults to 5.
         model_filepath (str, optional): The file path to load/save the model checkpoint.
             Defaults to "model_and_optimizer.pth".
     """
@@ -291,7 +295,7 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
 
     # Training LLM model from scratch
     train_losses, val_losses, tokens_seen = train_model(model_llm, train_loader, val_loader, optimizer, device,
-                                                        num_epochs=num_epochs, eval_freq=5, eval_iter=5,
+                                                        num_epochs=num_epochs, eval_freq=eval_freq, eval_iter=eval_iter,
                                                         start_context="Every effort moves you", tokenizer=tokenizer)
     epochs_tensor = torch.linspace(0, num_epochs, len(train_losses))
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
