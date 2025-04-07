@@ -2,7 +2,28 @@ import urllib.request
 import os
 import re
 
-def download_gutenberg_books(book_ids, download_dir="gutenberg_books"):
+def print_on_verbose(text, verbose):
+    """
+    Prints text to the console if verbose mode is enabled.
+
+    This function provides a way to conditionally print information during
+    program execution. If the `verbose` flag is set to True, the provided
+    text will be printed to the console. Otherwise, no output will be
+    generated.
+
+    Args:
+        text (str): The text to be printed.
+        verbose (bool): A flag indicating whether to print the text.
+            If True, the text will be printed. If False, nothing will be printed.
+
+    Returns:
+        None
+    """
+    if not verbose:
+        return
+    print(text)
+
+def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=True):
     """
     Downloads multiple books from Project Gutenberg.
 
@@ -14,6 +35,8 @@ def download_gutenberg_books(book_ids, download_dir="gutenberg_books"):
         book_ids (list): A list of Project Gutenberg book IDs (integers).
         download_dir (str, optional): The directory to save the downloaded books.
             Defaults to "gutenberg_books".
+        verbose (bool, optional): A flag indicating whether to print download
+            progress. Defaults to True.
 
     Returns:
         list: A list of filepaths where the downloaded books are saved.
@@ -30,14 +53,14 @@ def download_gutenberg_books(book_ids, download_dir="gutenberg_books"):
         filepath = os.path.join(download_dir, f"{book_id}.txt")
 
         try:
-            print(f"Downloading book ID {book_id} from {url}...")
+            print_on_verbose(f"Downloading book ID {book_id} from {url}...", verbose)
             urllib.request.urlretrieve(url, filepath)
             filepaths.append(filepath)
-            print(f"Successfully downloaded book ID {book_id} to {filepath}")
+            print_on_verbose(f"Successfully downloaded book ID {book_id} to {filepath}", verbose)
         except urllib.error.HTTPError as e:
-            print(f"Error downloading book ID {book_id}: {e}")
+            print_on_verbose(f"Error downloading book ID {book_id}: {e}", verbose)
         except Exception as e:
-            print(f"An unexpected error occurred while downloading book ID {book_id}: {e}")
+            print_on_verbose(f"An unexpected error occurred while downloading book ID {book_id}: {e}", verbose)
 
     return filepaths
 
