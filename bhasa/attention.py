@@ -3,18 +3,30 @@ import torch.nn as nn
 
 class MultiHeadAttention(nn.Module):
     """
-    Multi-Head Attention module.
+    Multi-Head Attention module for processing sequential data.
+
+    This module implements the multi-head attention mechanism, which allows the model to
+    attend to information from different representation subspaces at different positions.
+    It is a crucial component in transformer-based architectures.
 
     Args:
-        d_in (int): Input dimension.
-        d_out (int): Output dimension.
-        context_length (int): Maximum length of the context.
-        dropout (float): Dropout probability.
+        d_in (int): Input dimension (embedding dimension).
+        d_out (int): Output dimension (embedding dimension).
+        context_length (int): Maximum length of the input sequence (context).
+        dropout (float): Dropout probability for regularization.
         num_heads (int): Number of attention heads.
-        qkv_bias (bool, optional): Whether to use bias in the query, key, and value projections. Defaults to False.
+        qkv_bias (bool, optional): Whether to include bias in the query, key, and value projections. Defaults to False.
 
-    Returns:
-        torch.Tensor: Output tensor of shape (batch_size, num_tokens, d_out).
+    Attributes:
+        d_out (int): Output dimension.
+        num_heads (int): Number of attention heads.
+        head_dim (int): Dimension of each attention head.
+        W_query (nn.Linear): Linear layer for query projection.
+        W_key (nn.Linear): Linear layer for key projection.
+        W_value (nn.Linear): Linear layer for value projection.
+        out_proj (nn.Linear): Linear layer for output projection.
+        dropout (nn.Dropout): Dropout layer.
+        mask (torch.Tensor): Causal attention mask.
     """
     def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False):
         super().__init__()
@@ -43,6 +55,15 @@ class MultiHeadAttention(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Forward pass of the Multi-Head Attention module.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, num_tokens, d_in).
+
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, num_tokens, d_out).
+        """
         b, num_tokens, d_in = x.shape
 
         # Tensor shape: (b, num_tokens, d_out)

@@ -1,10 +1,43 @@
 import torch
 
 def softmax_with_temperature(logits, temperature):
+    """
+    Applies softmax with a temperature scaling to the input logits.
+
+    This function scales the logits by the given temperature and then applies
+    the softmax function to obtain probabilities. Higher temperatures result
+    in a softer probability distribution, while lower temperatures make the
+    distribution sharper.
+
+    Args:
+        logits (torch.Tensor): The input logits tensor.
+        temperature (float): The temperature scaling factor.
+
+    Returns:
+        torch.Tensor: The softmax probabilities with temperature scaling.
+    """
     scaled_logits = logits / temperature
     return torch.softmax(scaled_logits, dim=0)
 
 def generate(model, idx, max_new_tokens, context_size, temperature=0.0, top_k=None, eos_id=None):
+    """
+    Generates text using a language model.
+
+    This function generates text by iteratively predicting the next token based on
+    the current context. It supports temperature scaling and top-k sampling.
+
+    Args:
+        model (torch.nn.Module): The language model.
+        idx (torch.Tensor): The initial context as a tensor of token IDs.
+        max_new_tokens (int): The maximum number of tokens to generate.
+        context_size (int): The maximum context size supported by the model.
+        temperature (float, optional): The temperature for scaling the logits. Defaults to 0.0 (greedy decoding).
+        top_k (int, optional): The number of top-k tokens to consider for sampling. Defaults to None (no top-k sampling).
+        eos_id (int, optional): The end-of-sequence token ID. Defaults to None.
+
+    Returns:
+        torch.Tensor: A tensor of generated token IDs.
+    """
     # idx is (batch, n_tokens) array of indices in the current context
     for _ in range(max_new_tokens):
 
@@ -54,7 +87,9 @@ if __name__ == "__main__":
     path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     sys.path.append(path)
 
-    from bhase import tokenizer as tokenizer_lib
+    from bhasa import tokenizer as tokenizer_lib
+    from bhasa import config
+    from bhasa import model
     tokenizer = tokenizer_lib.get_tokenizer()
 
     start_context = "Hello, I am"
@@ -64,9 +99,11 @@ if __name__ == "__main__":
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
     print("encoded_tensor.shape:", encoded_tensor.shape)
 
-    model.eval() # disable dropout
+    model_llm = model.LLMModel(config.GPT_CONFIG_124M)
+    model_llm = model.load_model(model_llm)
+    model_llm.eval() # disable dropout
 
-    out = generate(model=model, idx=encoded_tensor, max_new_tokens=6, context_size=config.GPT_CONFIG_124M["context_length"])
+    out = generate(model=model_llm, idx=encoded_tensor, max_new_tokens=6, context_size=config.GPT_CONFIG_124M["context_length"])
 
     print("Output:", out)
     print("Output length:", len(out[0]))

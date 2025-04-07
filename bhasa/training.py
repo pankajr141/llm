@@ -80,6 +80,7 @@ def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 track_tokens_seen.append(tokens_seen)
+
                 print(f"Ep {epoch+1} (Step {global_step:06d}): "
                       f"Train loss {train_loss:.3f}, "
                       f"Val loss {val_loss:.3f}"
@@ -122,29 +123,43 @@ def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
 
 def train(tokenizer):
     torch.manual_seed(123)
-
     model_llm = model.LLMModel(config_train)
-    model_llm = model.load_model(model_llm)                   # Resuming training by loading previously trained model
-    model_llm.to(device)                             # Assigning GPU/CPU to model
-    
+    model_llm = model.load_model(model_llm)         # Resuming training by loading previously trained model
+    model_llm.to(device)                            # Assigning GPU/CPU to model
+
+    print(f"Device: {device}")
+
     model.print_model_information(model_llm)
 
-    filepath = data.download_sample_text()           # Download sample data for model training
-    textdata = data.read_filepath(filepath)          # Read content of sample file
+    filepaths = data.download_sample_text()         # Download sample data for model training
+    textdata = data.read_filepaths(filepaths)       # Read content of sample file
 
     total_characters = len(textdata)                # Number of characters in textdata
     total_tokens = len(tokenizer.encode(textdata))  # Convert/Encode textdata -> tokens to be passed to LLM
     print(f"Characters: {total_characters}\nTokens: {total_tokens}")
 
-    train_data, val_data = split_data(textdata, train_ratio=0.90)
+    train_data, val_data = split_data(textdata, train_ratio=0.70)
     
     context_len = config_train['context_length']
+
     # Creating data loader for both train and validation
     train_loader = dataset.create_dataloader(train_data, batch_size=2, max_length=context_len, stride=context_len,
                                              drop_last=True, shuffle=True, num_workers=0)
+    
     val_loader = dataset.create_dataloader(val_data, batch_size=2, max_length=context_len, stride=context_len,
                                             drop_last=False, shuffle=False, num_workers=0)
+    # print("Train loader:")
+    # for x, y in train_loader:
+    #     print(x.shape, y.shape)
 
+    # print("\nValidation loader:")
+    # for x, y in val_loader:
+    #     print(x.shape, y.shape)
+
+    # for input_batch, target_batch in train_loader:
+    #     print(input_batch.shape, target_batch.shape)
+        
+    # return
     # Defining optimizer
     optimizer = torch.optim.AdamW(model_llm.parameters(), lr=0.0004, weight_decay=0.1)
 
