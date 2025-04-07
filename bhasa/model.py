@@ -313,6 +313,7 @@ def save_model(model, optimizer, modelfile="model_and_optimizer.pth"):
                 },
                 modelfile
     )
+    print(f"Model saved to {modelfile}")
 
 def load_model(model, modelfile="model_and_optimizer.pth"):
     """
