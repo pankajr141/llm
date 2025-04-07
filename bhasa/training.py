@@ -13,10 +13,6 @@ from bhasa import generator
 from bhasa import data, dataset
 from bhasa import tokenizer as tokenizer_lib
 
-tokenizer = None
-config_train = None
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 def calc_loss_batch(input_batch, target_batch, model, device):
     """
     Calculates the cross-entropy loss for a single batch.
@@ -231,23 +227,39 @@ def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
     ax1.set_ylabel("Loss")
     ax1.legend(loc="upper right")
  
+def get_device():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return device
 
-def train(tokenizer=tokenizer_lib.get_tokenizer(), num_epochs=10, model_filepath="model_and_optimizer.pth"):
+def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFIG_124M, 
+          num_epochs=10, model_filepath="model_and_optimizer.pth"):
     """
-    Main training function.
+    Main training function to orchestrate the model training process.
 
-    This function orchestrates the entire training process, including loading
-    the model, preparing the data, training the model, and saving the trained
-    model.
+    This function manages the entire training pipeline for the language model.
+    It performs the following steps:
+    1. Initializes the training environment, including setting the random seed and determining the device (CPU or GPU).
+    2. Loads the language model, either from scratch or from a previously saved checkpoint.
+    3. Prepares the training and validation datasets using the specified tokenizer and configuration.
+    4. Sets up the optimizer for training.
+    5. Iterates through the specified number of training epochs, performing forward and backward passes, and updating the model's weights.
+    6. Evaluates the model's performance on the validation set at regular intervals.
+    7. Generates and prints sample text from the model during training to monitor progress.
+    8. Plots the training and validation loss curves.
+    9. Saves the trained model to a file, allowing for later resumption of training or inference.
 
     Args:
-        tokenizer (tiktoken.Encoding, optional): The tokenizer. Defaults to
-            tokenizer_lib.get_tokenizer().
-        num_epochs (int, optional): The number of training epochs. Defaults to 10.
-        model_filepath (str, optional): The file path to load/save the model.
+        tokenizer (tiktoken.Encoding, optional): The tokenizer to use for text processing.
+            Defaults to tokenizer_lib.get_tokenizer().
+        config_train (dict, optional): The configuration dictionary for the model.
+            Defaults to config.GPT_CONFIG_124M.
+        num_epochs (int, optional): The number of training epochs to run. Defaults to 10.
+        model_filepath (str, optional): The file path to load/save the model checkpoint.
             Defaults to "model_and_optimizer.pth".
     """
     torch.manual_seed(123)
+    device = get_device()
+
     model_llm = model.LLMModel(config_train)
     model_llm = model.load_model(model_llm, model_filepath) # Resuming training by loading previously trained model
     model_llm.to(device)                                    # Assigning GPU/CPU to model
@@ -288,5 +300,4 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), num_epochs=10, model_filepath
     model.save_model(model_llm, model_filepath)
 
 if __name__ == "__main__":
-    config_train = config.GPT_CONFIG_124M
     train()
