@@ -6,12 +6,14 @@ sys.path.append(path)
 import torch
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from torch.nn.parallel.data_parallel import DataParallel
 
 from bhasa import config
 from bhasa import model
 from bhasa import generator
 from bhasa import data, dataset
 from bhasa import tokenizer as tokenizer_lib
+
 
 def calc_loss_batch(input_batch, target_batch, model, device):
     """
@@ -174,7 +176,11 @@ def generate_and_print_sample(model, device, tokenizer, start_context):
         start_context (str): The starting context for text generation.
     """
     model.eval()
-    context_size = model.pos_emb.weight.shape[0] # config_train["context_length"]
+    if isinstance(model, DataParallel):
+        context_size = model.module.pos_emb.weight.shape[0] # config_train["context_length"]
+    else:
+        context_size = model.pos_emb.weight.shape[0] # config_train["context_length"]
+
     encoded = tokenizer_lib.text_to_token_ids(start_context, tokenizer).to(device)
     with torch.no_grad():
         token_ids = generator.generate(

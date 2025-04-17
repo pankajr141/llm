@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 from bhasa.attention import MultiHeadAttention
+from huggingface_hub import PyTorchModelHubMixin
 
 class GELU(nn.Module):
     """
@@ -202,7 +203,8 @@ class TransformerBlock(nn.Module):
         x = x + shortcut
         return x
 
-class LLMModel(nn.Module):
+class LLMModel(nn.Module, PyTorchModelHubMixin, repo_url="pankajr141/llm_bhasa_v1", 
+               pipeline_tag="text-generation", license="mit"):
     """
     Large Language Model (LLM) module.
 
