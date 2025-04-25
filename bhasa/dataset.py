@@ -74,7 +74,7 @@ class CustomDataset(IterableDataset):
             except Exception as err:
                 print(f"Error processing {filepath}: {err}")
 
-def create_dataloader(txt, batch_size=4, max_length=256, stride=128, shuffle=True,
+def create_dataloader(txt, batch_size=4, max_length=256, stride=128,
                       drop_last=True, num_workers=0):
     """
     Creates a DataLoader for training a language model.
@@ -88,7 +88,6 @@ def create_dataloader(txt, batch_size=4, max_length=256, stride=128, shuffle=Tru
         batch_size (int, optional): The number of samples per batch. Defaults to 4.
         max_length (int, optional): The maximum length of each input and target sequence. Defaults to 256.
         stride (int, optional): The step size for the sliding window. Defaults to 128.
-        shuffle (bool, optional): Whether to shuffle the data. Defaults to True.
         drop_last (bool, optional): Whether to drop the last incomplete batch. Defaults to True.
         num_workers (int, optional): The number of subprocesses to use for data loading. Defaults to 0.
 
@@ -108,7 +107,6 @@ def create_dataloader(txt, batch_size=4, max_length=256, stride=128, shuffle=Tru
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=shuffle,
         drop_last=drop_last,
         num_workers=num_workers
     )
@@ -130,7 +128,7 @@ if __name__ == "__main__":
     # textdata = data.read_filepaths(filepaths)
     # print(len(textdata))
 
-    dataloader = create_dataloader(filepaths, batch_size=1, max_length=4, stride=1, shuffle=False)
+    dataloader = create_dataloader(filepaths, batch_size=1, max_length=4, stride=1)
     for batch in dataloader:
         print(batch)
         break

@@ -57,22 +57,15 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         float: The average loss. Returns NaN if the data loader is empty.
     """
     total_loss = 0.
-    if len(data_loader) == 0:
-        return float("nan")
-    elif num_batches is None:
-        num_batches = len(data_loader)
-    else:
-        num_batches = min(num_batches, len(data_loader))
-
     for i, (input_batch, target_batch) in enumerate(data_loader):
-        if i < num_batches:
-            loss = calc_loss_batch(
-                input_batch, target_batch, model, device
-            )
-            total_loss += loss.item()
-        else:
-            break
-    return total_loss / num_batches
+        if i > num_batches:
+            return total_loss / num_batches
+
+        loss = calc_loss_batch(
+            input_batch, target_batch, model, device
+        )
+        total_loss += loss.item()
+    return total_loss / i
 
 def evaluate_model(model, train_loader, val_loader, device, eval_iter):
     """
@@ -191,24 +184,24 @@ def generate_and_print_sample(model, device, tokenizer, start_context):
     print(decoded_text.replace("\n", " "))
     model.train()
 
-def split_data(textdata, train_ratio=0.90):
+def split_data(filepaths, train_ratio=0.90):
     """
-    Splits the text data into training and validation sets.
+    Splits the filepaths into training and validation sets.
 
-    This function divides the input text data into two parts: a training set
+    This function divides the input filepaths into two parts: a training set
     and a validation set, based on the specified ratio.
 
     Args:
-        textdata (str): The text data.
+        filepaths (list): A list of filepaths to text files.
         train_ratio (float, optional): The ratio of data to use for training.
             Defaults to 0.90.
 
     Returns:
         tuple: A tuple containing the training data and validation data.
     """
-    split_idx = int(train_ratio * len(textdata))
-    train_data = textdata[:split_idx]
-    val_data = textdata[split_idx:]
+    split_idx = int(train_ratio * len(filepaths))
+    train_data = filepaths[:split_idx]
+    val_data = filepaths[split_idx:]
     return train_data, val_data
 
 def plot_losses(epochs_seen, tokens_seen, train_losses, val_losses):
@@ -279,22 +272,18 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
     model.print_model_information(model_llm)
 
     filepaths = data.download_sample_text()         # Download sample data for model training
-    textdata = data.read_filepaths(filepaths)       # Read content of sample file
+    print(f"Total filepaths: len{filepaths}")
 
-    total_characters = len(textdata)                # Number of characters in textdata
-    total_tokens = len(tokenizer.encode(textdata))  # Convert/Encode textdata -> tokens to be passed to LLM
-    print(f"Characters: {total_characters}\nTokens: {total_tokens}")
-
-    train_data, val_data = split_data(textdata, train_ratio=0.70)
+    train_data, val_data = split_data(filepaths, train_ratio=0.70)
     
     context_len = config_train['context_length']
 
     # Creating data loader for both train and validation
     train_loader = dataset.create_dataloader(train_data, batch_size=2, max_length=context_len, stride=context_len,
-                                             drop_last=True, shuffle=True, num_workers=0)
+                                             drop_last=True, num_workers=0)
     
     val_loader = dataset.create_dataloader(val_data, batch_size=2, max_length=context_len, stride=context_len,
-                                            drop_last=False, shuffle=False, num_workers=0)
+                                            drop_last=False, num_workers=0)
 
     # Defining optimizer
     optimizer = torch.optim.AdamW(model_llm.parameters(), lr=0.0004, weight_decay=0.1)
