@@ -74,7 +74,7 @@ class CustomDataset(IterableDataset):
             except Exception as err:
                 print(f"Error processing {filepath}: {err}")
 
-def create_dataloader(txt, batch_size=4, max_length=256, stride=128,
+def create_dataloader(filepaths, batch_size=4, max_length=256, stride=128,
                       drop_last=True, num_workers=0):
     """
     Creates a DataLoader for training a language model.
@@ -99,7 +99,7 @@ def create_dataloader(txt, batch_size=4, max_length=256, stride=128,
     tokenizer = tiktoken.get_encoding("gpt2")
 
     # Creates dataset
-    dataset = CustomDataset(txt, tokenizer, max_length, stride)
+    dataset = CustomDataset(filepaths, tokenizer, max_length, stride)
 
     # drop_last=True drops the last batch if it is shorter than the specified batch_size
     # to prevent loss spikes during training.
