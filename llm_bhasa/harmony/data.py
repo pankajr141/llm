@@ -1,6 +1,7 @@
 import urllib.request
 import os
 import re
+from tqdm import tqdm
 
 def print_on_verbose(text, verbose):
     """
@@ -48,7 +49,7 @@ def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=T
     # Create the download directory if it doesn't exist
     os.makedirs(download_dir, exist_ok=True)
 
-    for book_id in book_ids:
+    for book_id in tqdm(book_ids):
         url = base_url.format(book_id, book_id)
         filepath = os.path.join(download_dir, f"{book_id}.txt")
 
@@ -117,6 +118,6 @@ def read_filepaths(filepaths):
 if __name__ == "__main__":
 
     gutenberg_book_ids = range(100)
-    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=True)
+    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False)
     textdata = read_filepaths(filepaths)
     print(f"text: {textdata[:100]}")
