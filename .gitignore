@@ -2,3 +2,5 @@
 build*
 dist*
 *egg*
+gutenberg_books*
+the-verdict.txt

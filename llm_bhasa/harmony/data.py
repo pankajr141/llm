@@ -1,7 +1,8 @@
-import urllib.request
 import os
 import re
+from tqdm.contrib.concurrent import process_map
 from tqdm import tqdm
+import urllib.request
 
 def print_on_verbose(text, verbose):
     """
@@ -24,56 +25,80 @@ def print_on_verbose(text, verbose):
         return
     print(text)
 
-def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=True):
-    """
-    Downloads multiple books from Project Gutenberg.
+def _download_gutenberg_books(args):
+    """Downloads a single book from Project Gutenberg.
 
-    This function downloads books from Project Gutenberg based on their book IDs.
-    It handles potential errors during download and saves each book as a separate
-    text file in the specified directory.
+    This is a helper function used internally by `download_gutenberg_books`.
+    It attempts to download a book given its ID and a download directory.
 
     Args:
-        book_ids (list): A list of Project Gutenberg book IDs (integers).
-        download_dir (str, optional): The directory to save the downloaded books.
-            Defaults to "gutenberg_books".
-        verbose (bool, optional): A flag indicating whether to print download
-            progress. Defaults to True.
+        args (tuple): A tuple containing the book ID (int) and the download directory (str).
 
     Returns:
-        list: A list of filepaths where the downloaded books are saved.
-            Returns an empty list if no books were successfully downloaded.
+        tuple: A tuple containing a boolean indicating success (True) or failure (False),
+               and either the filepath of the downloaded book (on success) or an error message (on failure).
     """
+    book_id, download_dir = args
     base_url = "https://www.gutenberg.org/files/{}/{}-0.txt"
+    url = base_url.format(book_id, book_id)
+    filepath = os.path.join(download_dir, f"{book_id}.txt")
+    try:
+        urllib.request.urlretrieve(url, filepath)
+    except urllib.error.HTTPError as e:
+        return False, f"Error downloading book ID {book_id}: {e}"
+    except Exception as e:
+        return False, f"An unexpected error occurred while downloading book ID {book_id}: {e}"
+    return True, filepath
+
+def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=True, njobs=1):
+    """Downloads multiple books from Project Gutenberg.
+
+    This function downloads a collection of books from Project Gutenberg, given their IDs.
+    It supports both single-threaded and multi-threaded downloading for efficiency.
+
+    Args:
+        book_ids (list): A list of Project Gutenberg book IDs (integers) to download.
+        download_dir (str, optional): The directory where the downloaded books will be saved.
+            Defaults to "gutenberg_books".
+        verbose (bool, optional): A flag indicating whether to print download progress and error messages.
+            Defaults to True.
+        njobs (int, optional): The number of jobs to run in parallel for downloading.
+            If 1, downloads are performed sequentially. If greater than 1, downloads are multi-threaded.
+            Defaults to 1.
+
+    Returns:
+        list: A list of filepaths of the successfully downloaded books.
+    """
     filepaths = []
 
     # Create the download directory if it doesn't exist
     os.makedirs(download_dir, exist_ok=True)
 
-    success = 0
-    failure = 0
-    with tqdm(book_ids, desc="Downloading gutenberg books", postfix={"success": success, "failure": failure}) as pbar:
-        for book_id in pbar:
-            url = base_url.format(book_id, book_id)
-            filepath = os.path.join(download_dir, f"{book_id}.txt")
-    
-            try:
-                print_on_verbose(f"Downloading book ID {book_id} from {url}...", verbose)
-                urllib.request.urlretrieve(url, filepath)
-                filepaths.append(filepath)
-                print_on_verbose(f"Successfully downloaded book ID {book_id} to {filepath}", verbose)
-                success += 1
-            except urllib.error.HTTPError as e:
-                print_on_verbose(f"Error downloading book ID {book_id}: {e}", verbose)
-                failure += 1
-            except Exception as e:
-                print_on_verbose(f"An unexpected error occurred while downloading book ID {book_id}: {e}", verbose)
-                failure += 1
-
-            pbar.set_postfix({"success": success, "failure": failure})
-
+    if njobs == 1:
+        success = 0
+        failure = 0
+        with tqdm(book_ids, desc="Downloading gutenberg books", postfix={"success": success, "failure": failure}) as pbar:
+            for book_id in pbar:
+                status, filepath = _download_gutenberg_books((book_id, download_dir))
+                if status:
+                    filepaths.append(filepath)
+                    success += 1
+                else:
+                    failure += 1
+                    print_on_verbose(filepath, verbose)
+                    
+                pbar.set_postfix({"success": success, "failure": failure})
+    else:
+        args = list(zip(book_ids, [download_dir] * len(book_ids)))
+        result = process_map(_download_gutenberg_books, 
+                             args,              
+                             max_workers=njobs,
+                             chunksize=1,
+                             desc=f"Downloading gutenberg books")
+        filepaths = list(filter(lambda x: x[0], result))
     return filepaths
 
-def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True):
+def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True, njobs=1):
     """
     Downloads a sample text file and multiple books from Project Gutenberg.
 
@@ -89,6 +114,10 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True):
             Frankenstein, The Adventures of Sherlock Holmes).
         verbose (bool, optional): A flag indicating whether to print download
             progress. Defaults to True.
+        njobs (int, optional): The number of jobs to run in parallel for downloading.
+            If 1, downloads are performed sequentially. If greater than 1, downloads are multi-threaded.
+            Defaults to 1.
+
     Returns:
         list: A list of filepaths where the downloaded text file and Gutenberg
             books are saved.
@@ -99,7 +128,7 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True):
     urllib.request.urlretrieve(url, filepath)
 
     # Download multiple books from Project Gutenberg
-    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose=verbose)
+    gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose=verbose, njobs=njobs)
 
     return [filepath] + gutenberg_filepaths
 
@@ -125,7 +154,6 @@ def read_filepaths(filepaths):
 
 if __name__ == "__main__":
 
-    gutenberg_book_ids = range(100)
-    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False)
-    textdata = read_filepaths(filepaths)
-    print(f"text: {textdata[:100]}")
+    gutenberg_book_ids = range(10)
+    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False, njobs=1)
+    print(f"filepaths: {len(filepaths)}")
