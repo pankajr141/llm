@@ -49,19 +49,27 @@ def download_gutenberg_books(book_ids, download_dir="gutenberg_books", verbose=T
     # Create the download directory if it doesn't exist
     os.makedirs(download_dir, exist_ok=True)
 
-    for book_id in tqdm(book_ids):
-        url = base_url.format(book_id, book_id)
-        filepath = os.path.join(download_dir, f"{book_id}.txt")
+    success = 0
+    failure = 0
+    with tqdm(book_ids, desc="Downloading gutenberg books", postfix={"success": success, "failure": failure}) as pbar:
+        for book_id in pbar:
+            url = base_url.format(book_id, book_id)
+            filepath = os.path.join(download_dir, f"{book_id}.txt")
+    
+            try:
+                print_on_verbose(f"Downloading book ID {book_id} from {url}...", verbose)
+                urllib.request.urlretrieve(url, filepath)
+                filepaths.append(filepath)
+                print_on_verbose(f"Successfully downloaded book ID {book_id} to {filepath}", verbose)
+                success += 1
+            except urllib.error.HTTPError as e:
+                print_on_verbose(f"Error downloading book ID {book_id}: {e}", verbose)
+                failure += 1
+            except Exception as e:
+                print_on_verbose(f"An unexpected error occurred while downloading book ID {book_id}: {e}", verbose)
+                failure += 1
 
-        try:
-            print_on_verbose(f"Downloading book ID {book_id} from {url}...", verbose)
-            urllib.request.urlretrieve(url, filepath)
-            filepaths.append(filepath)
-            print_on_verbose(f"Successfully downloaded book ID {book_id} to {filepath}", verbose)
-        except urllib.error.HTTPError as e:
-            print_on_verbose(f"Error downloading book ID {book_id}: {e}", verbose)
-        except Exception as e:
-            print_on_verbose(f"An unexpected error occurred while downloading book ID {book_id}: {e}", verbose)
+            pbar.set_postfix({"success": success, "failure": failure})
 
     return filepaths
 

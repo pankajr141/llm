@@ -82,31 +82,27 @@ def generate(model, idx, max_new_tokens, context_size, temperature=0.0, top_k=No
     return idx
 
 if __name__ == "__main__":
-    import os
-    import sys
-    path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    sys.path.append(path)
 
-    from bhasa import tokenizer as tokenizer_lib
-    from bhasa import config
-    from bhasa import model
-    tokenizer = tokenizer_lib.get_tokenizer()
+    import torch
+    from llm_bhasa.harmony import generator
+    from llm_bhasa.harmony import tokenizer as tokenizer_lib
+    from llm_bhasa.harmony import config
+    from llm_bhasa.harmony import model
 
-    start_context = "Hello, I am"
-    encoded = tokenizer.encode(start_context)
-    print("encoded:", encoded)
-    
-    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-    print("encoded_tensor.shape:", encoded_tensor.shape)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    model_filepath = ""
     model_llm = model.LLMModel(config.GPT_CONFIG_124M)
-    model_llm = model.load_model(model_llm)
+    model_llm = model.load_model(model_filepath)
+    model_llm.to(device)
     model_llm.eval() # disable dropout
 
-    out = generate(model=model_llm, idx=encoded_tensor, max_new_tokens=6, context_size=config.GPT_CONFIG_124M["context_length"])
+    start_context = "Hello, I am"
 
-    print("Output:", out)
-    print("Output length:", len(out[0]))
+    tokenizer = tokenizer_lib.get_tokenizer()
+    encoded = tokenizer_lib.text_to_token_ids(start_context, tokenizer).to(device)
+    token_ids  = generator.generate(model=model_llm, idx=encoded, max_new_tokens=50, context_size=config.GPT_CONFIG_124M["context_length"])
+    decoded_text = tokenizer_lib.token_ids_to_text(token_ids, tokenizer)
+    decoded_text = decoded_text.replace("\n", " ")
 
-    decoded_text = tokenizer.decode(out.squeeze(0).tolist())
     print(decoded_text)
