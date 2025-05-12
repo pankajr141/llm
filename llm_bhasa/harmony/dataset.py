@@ -1,6 +1,7 @@
 import torch
 import tiktoken
 from torch.utils.data import IterableDataset, Dataset, DataLoader
+from llm_bhasa.harmony import data
 
 class CustomDataset(IterableDataset):
     """
@@ -58,19 +59,23 @@ class CustomDataset(IterableDataset):
         """
         for filepath in self.filepaths:
             try:
-                with open(filepath, "r", encoding="utf-8") as file:
-                    text = file.read()
-                    token_ids = self.tokenizer.encode(text)  # Tokenize the text
-                    """
-                    Sliding window on length (max_length) and jump (stride) to
-                    store input and target to be used later.
-                    Note: Since all data is loaded into memory with large dataset
-                    this can cause implementation issues
-                    """
-                    for i in range(0, len(token_ids) - self.max_length, self.stride):
-                        x = token_ids[i:i + self.max_length]
-                        y = token_ids[i + 1: i + self.max_length + 1]
-                        yield torch.tensor(x, dtype=torch.long), torch.tensor(y, dtype=torch.long)
+
+                # In case filepath is an URI directly read text from URI                
+                status, text = data.read_from_url(filepath) if filepath.startswith("http") else data.read_from_file(filepath)
+                if not status:
+                    continue
+
+                token_ids = self.tokenizer.encode(text)  # Tokenize the text
+                """
+                Sliding window on length (max_length) and jump (stride) to
+                store input and target to be used later.
+                Note: Since all data is loaded into memory with large dataset
+                this can cause implementation issues
+                """
+                for i in range(0, len(token_ids) - self.max_length, self.stride):
+                    x = token_ids[i:i + self.max_length]
+                    y = token_ids[i + 1: i + self.max_length + 1]
+                    yield torch.tensor(x, dtype=torch.long), torch.tensor(y, dtype=torch.long)
             except Exception as err:
                 print(f"Error processing {filepath}: {err}")
 
@@ -113,17 +118,23 @@ def create_dataloader(filepaths, batch_size=4, max_length=256, stride=128,
     return dataloader
 
 if __name__ == "__main__":
-    # working with sample data
-    from llm_bhasa.harmony import data
-    gutenberg_book_ids = range(9)  # 100
-    filepaths = data.download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False)
-    # filepaths = ['the-verdict.txt', 'gutenberg_books/1.txt', 'gutenberg_books/3.txt', 'gutenberg_books/7.txt']
 
-    # print(filepaths)
-    # textdata = data.read_filepaths(filepaths)
-    # print(len(textdata))
+    # import os
+    # import sys
+    # path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../")
+    # sys.path.append(path)
+
+    gutenberg_book_ids = range(9)  # 100
+
+    # Download file in localstorage
+    # filepaths = data.download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False)
+
+    # Direct download in memory
+    base_url = "https://www.gutenberg.org/files/{}/{}-0.txt"
+    filepaths = [base_url.format(book_id, book_id) for book_id in gutenberg_book_ids]
 
     dataloader = create_dataloader(filepaths, batch_size=1, max_length=4, stride=1)
-    for batch in dataloader:
-        print(batch)
-        break
+    for i, batch in enumerate(dataloader):
+        if i % 1000 == 0:
+            print(i)
+    print(i)

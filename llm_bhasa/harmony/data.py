@@ -25,6 +25,59 @@ def print_on_verbose(text, verbose):
         return
     print(text)
 
+def read_from_url(url):
+    """
+    Reads text content from a given URL.
+
+    This function attempts to open the specified URL and read its content,
+    assuming the content is encoded in UTF-8. It handles potential HTTP errors
+    and other exceptions that may occur during the process.
+
+    Args:
+        url (str): The URL from which to read the text content.
+
+    Returns:
+        tuple: A tuple containing:
+            - bool: True if the text was successfully read, False otherwise.
+            - str: Either the text content read from the URL (if successful) or
+                   an error message (if unsuccessful).
+    """
+    text = None
+    try:
+        with urllib.request.urlopen(url) as response:
+            text = response.read().decode('utf-8')
+    except urllib.error.HTTPError as e:
+        return False, f"Error reading url {url}: {e}"
+    except Exception as e:
+        return False, f"An unexpected error occurred while reading url: {e}"
+    return True, text
+
+def read_from_file(filepath):
+    """
+    Reads text content from a given file.
+
+    This function attempts to open the specified file and read its content,
+    assuming the content is encoded in UTF-8. It handles potential exceptions
+    that may occur during the process, such as file not found or permission
+    errors.
+
+    Args:
+        filepath (str): The path to the file from which to read the text content.
+
+    Returns:
+        tuple: A tuple containing:
+            - bool: True if the text was successfully read, False otherwise.
+            - str: Either the text content read from the file (if successful) or
+                   an error message (if unsuccessful).
+    """
+    text = None
+    try:
+        with open(filepath, "r", encoding="utf-8") as file:
+            text = file.read()
+    except Exception as e:
+        return False, f"An unexpected error occurred while reading filepath: {e}"
+    return True, text
+
 def _download_gutenberg_books(args):
     """Downloads a single book from Project Gutenberg.
 
@@ -149,12 +202,4 @@ def read_filepaths(filepaths):
     concatenated_text = ""
     for filepath in filepaths:
         with open(filepath, "r", encoding="utf-8") as file:
-            concatenated_text += file.read()
-    return concatenated_text
-
-if __name__ == "__main__":
-
-    gutenberg_book_ids = range(10)
-    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False, njobs=1)
-    print(f"filepaths: {len(filepaths)}")
-    
+            concatenated_t

@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as f:
 
 setup(
     name='llm_bhasa',
-    version='0.4',
+    version='0.5',
     packages=find_packages(),
     install_requires=requirements,
     author="Pankaj Rawat",
