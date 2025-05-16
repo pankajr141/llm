@@ -1,9 +1,11 @@
+import random
 import torch
 import tiktoken
 from torch.utils.data import IterableDataset, Dataset, DataLoader
 from llm_bhasa.harmony import data
+import more_itertools
 
-class CustomDataset(IterableDataset):
+class LLMDataset(IterableDataset):
     """
     Custom dataset for preparing text data for language model training.
 
@@ -30,9 +32,9 @@ class CustomDataset(IterableDataset):
         FileNotFoundError: If any of the specified filepaths do not exist.
         IOError: If there is an error reading any of the files.
     """
-    def __init__(self, filepaths, tokenizer, max_length, stride):
+    def __init__(self, filepaths, tokenizer, max_length, stride, shuffle, chunk_size):
         """
-        Initializes the CustomDataset.
+        Initializes the LLMDataset.
 
         Args:
             filepaths (list): A list of filepaths to text files.
@@ -44,6 +46,8 @@ class CustomDataset(IterableDataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.stride = stride
+        self.shuffle = shuffle
+        self.chunk_size = chunk_size
 
     def __iter__(self):
         """
@@ -57,29 +61,49 @@ class CustomDataset(IterableDataset):
                 - input_sequence (torch.Tensor): A tensor of token IDs representing the input sequence.
                 - target_sequence (torch.Tensor): A tensor of token IDs representing the target sequence.
         """
-        for filepath in self.filepaths:
-            try:
 
-                # In case filepath is an URI directly read text from URI                
-                status, text = data.read_from_url(filepath) if filepath.startswith("http") else data.read_from_file(filepath)
-                if not status:
-                    continue
+        # Shuffle the filepaths / URIs
+        filepaths = self.filepaths
+        if self.shuffle:
+            random.shuffle(filepaths)
 
-                token_ids = self.tokenizer.encode(text)  # Tokenize the text
-                """
-                Sliding window on length (max_length) and jump (stride) to
-                store input and target to be used later.
-                Note: Since all data is loaded into memory with large dataset
-                this can cause implementation issues
-                """
-                for i in range(0, len(token_ids) - self.max_length, self.stride):
-                    x = token_ids[i:i + self.max_length]
-                    y = token_ids[i + 1: i + self.max_length + 1]
-                    yield torch.tensor(x, dtype=torch.long), torch.tensor(y, dtype=torch.long)
-            except Exception as err:
-                print(f"Error processing {filepath}: {err}")
+        # Below we will group input files in chunks on n, then read each chunk and populate x and y pairs
+        # Once all data is collated then yield the results back. This ensures that at a time we only load
+        # n files in memory, thus reducing overall memory print.
+        chunks = more_itertools.chunked(filepaths, self.chunk_size)
+        for chunk in chunks:
 
-def create_dataloader(filepaths, batch_size=4, max_length=256, stride=128,
+            self.x_ids = []
+            self.y_ids = []
+            for filepath in chunk:
+                try:
+
+                    # In case filepath is an URI directly read text from URI                
+                    status, text = data.read_from_url(filepath) if filepath.startswith("http") else data.read_from_file(filepath)
+                    if not status:
+                        continue
+
+                    token_ids = self.tokenizer.encode(text)  # Tokenize the text
+                    """
+                    Sliding window on length (max_length) and jump (stride) to
+                    store input and target to be used later.
+                    Note: Since all data is loaded into memory with large dataset
+                    this can cause implementation issues
+                    """
+                    for i in range(0, len(token_ids) - self.max_length, self.stride):
+                        x = token_ids[i:i + self.max_length]
+                        y = token_ids[i + 1: i + self.max_length + 1]
+                        
+                        self.x_ids.append(torch.tensor(x, dtype=torch.long))
+                        self.y_ids.append(torch.tensor(y, dtype=torch.long))
+
+                except Exception as err:
+                    print(f"Error processing {filepath}: {err}")
+
+            for i in range(len(self.x_ids)):
+                yield self.x_ids[i], self.y_ids[i]
+
+def create_dataloader_llm(filepaths, batch_size=4, max_length=256, stride=128, shuffle=True, chunk_size=2, 
                       drop_last=True, num_workers=0):
     """
     Creates a DataLoader for training a language model.
@@ -104,7 +128,7 @@ def create_dataloader(filepaths, batch_size=4, max_length=256, stride=128,
     tokenizer = tiktoken.get_encoding("gpt2")
 
     # Creates dataset
-    dataset = CustomDataset(filepaths, tokenizer, max_length, stride)
+    dataset = LLMDataset(filepaths, tokenizer, max_length, stride, shuffle, chunk_size)
 
     # drop_last=True drops the last batch if it is shorter than the specified batch_size
     # to prevent loss spikes during training.
@@ -133,8 +157,7 @@ if __name__ == "__main__":
     base_url = "https://www.gutenberg.org/files/{}/{}-0.txt"
     filepaths = [base_url.format(book_id, book_id) for book_id in gutenberg_book_ids]
 
-    dataloader = create_dataloader(filepaths, batch_size=1, max_length=4, stride=1)
-    for i, batch in enumerate(dataloader):
-        if i % 1000 == 0:
-            print(i)
-    print(i)
+    dataloader = create_dataloader_llm(filepaths, batch_size=1, max_length=256, shuffle=True, chunk_size=2, stride=1)
+    for x, y in dataloader:
+        print(x.shape, y.shape)
+        break

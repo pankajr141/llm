@@ -175,15 +175,10 @@ def download_sample_text(gutenberg_book_ids=[1342, 84, 1661], verbose=True, njob
         list: A list of filepaths where the downloaded text file and Gutenberg
             books are saved.
     """
-    import urllib.request
-    url = ("https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch02/01_main-chapter-code/the-verdict.txt")
-    filepath = "the-verdict.txt"
-    urllib.request.urlretrieve(url, filepath)
 
     # Download multiple books from Project Gutenberg
     gutenberg_filepaths = download_gutenberg_books(gutenberg_book_ids, verbose=verbose, njobs=njobs)
-
-    return [filepath] + gutenberg_filepaths
+    return gutenberg_filepaths
 
 def read_filepaths(filepaths):
     """
@@ -202,4 +197,11 @@ def read_filepaths(filepaths):
     concatenated_text = ""
     for filepath in filepaths:
         with open(filepath, "r", encoding="utf-8") as file:
-            concatenated_t
+            concatenated_text += file.read()
+    return concatenated_text
+
+if __name__ == "__main__":
+
+    gutenberg_book_ids = range(10)
+    filepaths = download_sample_text(gutenberg_book_ids=gutenberg_book_ids, verbose=False, njobs=1)
+    print(f"filepaths: {len(filepaths)}")

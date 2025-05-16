@@ -6,8 +6,9 @@ from torch.nn.parallel.data_parallel import DataParallel
 from llm_bhasa.harmony import config
 from llm_bhasa.harmony import model
 from llm_bhasa.harmony import generator
-from llm_bhasa.harmony import data, dataset
+from llm_bhasa.harmony import data
 from llm_bhasa.harmony import tokenizer as tokenizer_lib
+from llm_bhasa.harmony.dataset import dataset_llm
 
 def calc_loss_batch(input_batch, target_batch, model, device):
     """
@@ -273,10 +274,10 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
     context_len = config_train['context_length']
 
     # Creating data loader for both train and validation
-    train_loader = dataset.create_dataloader(train_data, batch_size=2, max_length=context_len, stride=context_len,
+    train_loader = dataset_llm.create_dataloader_llm(train_data, batch_size=2, max_length=context_len, stride=context_len,
                                              drop_last=True, num_workers=0)
     
-    val_loader = dataset.create_dataloader(val_data, batch_size=2, max_length=context_len, stride=context_len,
+    val_loader = dataset_llm.create_dataloader_llm(val_data, batch_size=2, max_length=context_len, stride=context_len,
                                             drop_last=False, num_workers=0)
 
     # Defining optimizer
