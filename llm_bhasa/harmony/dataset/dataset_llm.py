@@ -72,9 +72,6 @@ class LLMDataset(IterableDataset):
         # n files in memory, thus reducing overall memory print.
         chunks = more_itertools.chunked(filepaths, self.chunk_size)
         for chunk in chunks:
-
-            self.x_ids = []
-            self.y_ids = []
             for filepath in chunk:
                 try:
 
@@ -93,15 +90,15 @@ class LLMDataset(IterableDataset):
                     for i in range(0, len(token_ids) - self.max_length, self.stride):
                         x = token_ids[i:i + self.max_length]
                         y = token_ids[i + 1: i + self.max_length + 1]
+                        x = torch.tensor(x, dtype=torch.long)
+                        y = torch.tensor(y, dtype=torch.long)
                         
-                        self.x_ids.append(torch.tensor(x, dtype=torch.long))
-                        self.y_ids.append(torch.tensor(y, dtype=torch.long))
+                        if x.shape[0] != self.max_length or y.shape[0] != self.max_length:
+                            continue
+                        yield x, y
 
                 except Exception as err:
                     print(f"Error processing {filepath}: {err}")
-
-            for i in range(len(self.x_ids)):
-                yield self.x_ids[i], self.y_ids[i]
 
 def create_dataloader(filepaths, batch_size=4, max_length=256, stride=128, shuffle=True, chunk_size=2, 
                       drop_last=True, num_workers=0):
