@@ -62,7 +62,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         total_loss += loss.item()
     return total_loss / i
 
-def evaluate_model(model, train_loader, val_loader, device, eval_iter):
+def evaluate_model(model, train_loader, val_loader, device, eval_batch_size):
     """
     Evaluates the model on the training and validation sets.
 
@@ -75,7 +75,7 @@ def evaluate_model(model, train_loader, val_loader, device, eval_iter):
         train_loader (torch.utils.data.DataLoader): The training data loader.
         val_loader (torch.utils.data.DataLoader): The validation data loader.
         device (torch.device): The device (CPU or GPU) to use.
-        eval_iter (int): The number of batches to use for evaluation.
+        eval_batch_size (int): The number of batches to use for evaluation.
 
     Returns:
         tuple: A tuple containing the training loss and validation loss.
@@ -83,16 +83,16 @@ def evaluate_model(model, train_loader, val_loader, device, eval_iter):
     model.eval()
     with torch.no_grad():
         train_loss = calc_loss_loader(
-            train_loader, model, device, num_batches=eval_iter
+            train_loader, model, device, num_batches=eval_batch_size
         )
         val_loss = calc_loss_loader(
-            val_loader, model, device, num_batches=eval_iter
+            val_loader, model, device, num_batches=eval_batch_size
         )
     model.train()
     return train_loss, val_loss
 
 def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
-                eval_freq, eval_iter, start_context, tokenizer):
+                eval_freq, eval_batch_size, start_context, tokenizer):
     """
     Trains the language model.
 
@@ -108,7 +108,7 @@ def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
         device (torch.device): The device (CPU or GPU) to use.
         num_epochs (int): The number of training epochs.
         eval_freq (int): The frequency of evaluation (in steps).
-        eval_iter (int): The number of batches to use for evaluation.
+        eval_batch_size (int): The number of batches to use for evaluation.
         start_context (str): The starting context for text generation.
         tokenizer (tiktoken.Encoding): The tokenizer.
 
@@ -134,7 +134,7 @@ def train_model(model, train_loader, val_loader, optimizer, device, num_epochs,
 
             if global_step % eval_freq == 0:
                 train_loss, val_loss = evaluate_model(
-                    model, train_loader, val_loader, device, eval_iter)
+                    model, train_loader, val_loader, device, eval_batch_size)
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 track_tokens_seen.append(tokens_seen)
@@ -226,7 +226,7 @@ def get_device():
     return device
 
 def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFIG_124M, 
-          num_epochs=10, eval_freq=5, eval_iter=5, model_filepath="model_and_optimizer.pth"):
+          num_epochs=10, eval_freq=5, eval_batch_size=5, model_filepath="model_and_optimizer.pth"):
     """
     Main training function to orchestrate the model training process.
 
@@ -250,7 +250,7 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
         num_epochs (int, optional): The number of training epochs to run. Defaults to 10.
         eval_freq (int, optional): The frequency of evaluation (in steps).
             Defaults to 5.
-        eval_iter (int, optional): The number of batches to use for each
+        eval_batch_size (int, optional): The number of batches to use for each
             evaluation. Defaults to 5.
         model_filepath (str, optional): The file path to load/save the model checkpoint.
             Defaults to "model_and_optimizer.pth".
@@ -285,7 +285,7 @@ def train(tokenizer=tokenizer_lib.get_tokenizer(), config_train=config.GPT_CONFI
 
     # Training LLM model from scratch
     train_losses, val_losses, tokens_seen = train_model(model_llm, train_loader, val_loader, optimizer, device,
-                                                        num_epochs=num_epochs, eval_freq=eval_freq, eval_iter=eval_iter,
+                                                        num_epochs=num_epochs, eval_freq=eval_freq, eval_batch_size=eval_batch_size,
                                                         start_context="Every effort moves you", tokenizer=tokenizer)
     epochs_tensor = torch.linspace(0, num_epochs, len(train_losses))
     plot_losses(epochs_tensor, tokens_seen, train_losses, val_losses)
