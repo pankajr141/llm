@@ -103,7 +103,7 @@ class InstructionFineTuneDataset(IterableDataset):
             )
             return instruction_text + input_text
 
-def create_dataloader_instruction_finetune(filepaths, batch_size=4, max_length=1024, shuffle=False, drop_last=True, num_workers=0, device="cpu"):
+def create_dataloader(filepaths, batch_size=4, max_length=1024, shuffle=False, drop_last=True, num_workers=0, device="cpu"):
     """
     Creates a DataLoader for training a language model.
 
@@ -180,15 +180,3 @@ def custom_collate_fn(batch, pad_token_id=50256, ignore_index=-100, allowed_max_
     inputs_tensor = torch.stack(inputs_lst).to(device)
     targets_tensor = torch.stack(targets_lst).to(device)
     return inputs_tensor, targets_tensor
-
-if __name__ == "__main__":
-    base_urls = ["https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch07/01_main-chapter-code/instruction-data.json", 
-                "https://raw.githubusercontent.com/Instruction-Tuning-with-GPT-4/GPT-4-LLM/refs/heads/main/data/alpaca_gpt4_data.json"]
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataloader = create_dataloader_instruction_finetune(base_urls, batch_size=2, max_length=1024, shuffle=True, device=device)
-    for i, (inputs, targets) in enumerate(dataloader):
-        #print(inputs.shape, targets.shape)
-        #break
-        if i % 100 == 0:
-            print(i)
